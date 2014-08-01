@@ -3,6 +3,8 @@ package com.prezi.grub.commands;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.io.CharSink;
+import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import com.prezi.grub.GrubException;
@@ -28,7 +30,6 @@ import java.util.concurrent.Callable;
 @Command(name = "generate", description = "Generate a new project")
 public class GenerateCommand implements Callable<Integer> {
 	protected static final Logger logger = LoggerFactory.getLogger(GenerateCommand.class);
-	private static final String CONFIG_FILE = "grub.ini";
 	public static final String GRUB_FILE = "template.grub";
 	private static final String INIT_GRUB = "init.grub";
 
@@ -92,8 +93,12 @@ public class GenerateCommand implements Callable<Integer> {
 				throw new GrubException("Cannot find 'template.grub' in template " + template);
 			}
 
+			// Create .grub dir
+			File templateGrubDir = new File(templateDirectory, ".grub");
+			FileUtils.forceMkdir(templateGrubDir);
+
 			// Adding init.grub
-			File initGrub = new File(templateDirectory, INIT_GRUB);
+			File initGrub = new File(templateGrubDir, INIT_GRUB);
 			Resources.asByteSource(Resources.getResource(INIT_GRUB)).copyTo(Files.asByteSink(initGrub));
 
 			FileUtils.deleteDirectory(targetDirectory);
@@ -103,15 +108,16 @@ public class GenerateCommand implements Callable<Integer> {
 			parameters.put("template", templateDirectory.getAbsolutePath());
 			parameters.put("target", targetDirectory.getAbsolutePath());
 
-			File configFile = new File(templateDirectory, CONFIG_FILE);
-			if (configFile.exists()) {
-				logger.debug("Loading configuration from {}", configFile);
-				Configuration configuration = Configurator.loadConfiguration(configFile);
-				Map<String, Object> resolved = configuration.resolve(input);
-				parameters.putAll(resolved);
-			} else {
-				logger.debug("No grub configuration file found");
-			}
+			logger.debug("Loading configuration from {}", grubFile);
+			Configuration configuration = Configurator.loadConfiguration(grubFile);
+			Map<String, Object> resolved = configuration.resolve(input);
+			parameters.putAll(resolved);
+
+			// Add prefix to template.grub
+			File processedGrubFile = new File(templateGrubDir, GRUB_FILE);
+			CharSink processedGrubSink = Files.asCharSink(processedGrubFile, Charsets.UTF_8, FileWriteMode.APPEND);
+			processedGrubSink.write("apply plugin: 'grub';");
+			Files.asCharSource(grubFile, Charsets.UTF_8).copyTo(processedGrubSink);
 
 			logger.info("Generating template");
 			GradleConnector connector = GradleConnector.newConnector();
@@ -124,7 +130,7 @@ public class GenerateCommand implements Callable<Integer> {
 					args.add("--quiet");
 				}
 				args.add("--init-script", initGrub.getPath());
-				args.add("--build-file", grubFile.getPath());
+				args.add("--build-file", processedGrubFile.getPath());
 				for (Map.Entry<String, Object> property : parameters.entrySet()) {
 					args.add("-P" + property.getKey() + "=" + property.getValue());
 				}

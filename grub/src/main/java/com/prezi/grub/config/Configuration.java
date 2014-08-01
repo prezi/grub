@@ -29,6 +29,11 @@ public class Configuration extends Script {
 		clone.call(parameters);
 	}
 
+	@SuppressWarnings("UnusedDeclaration")
+	public void generate(Closure<?> closure) {
+		// Do nothing
+	}
+
 	public Map<String, Object> resolve(BufferedReader input) throws IOException {
 		return parameters.resolve(input);
 	}

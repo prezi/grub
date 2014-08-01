@@ -10,6 +10,10 @@ parameters {
 		value { 12 }
 	}
 }
+generate {
+	// Make sure we succeed even if this closure doesn't work
+	make_sure this_deosnt compile
+}
 """)
 		expect:
 		config.resolve(null) == [
