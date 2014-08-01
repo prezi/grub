@@ -100,8 +100,8 @@ public class GenerateCommand implements Callable<Integer> {
 			FileUtils.forceMkdir(targetDirectory);
 
 			Map<String, Object> parameters = Maps.newLinkedHashMap();
-			parameters.put("template", templateDirectory);
-			parameters.put("target", targetDirectory);
+			parameters.put("template", templateDirectory.getAbsolutePath());
+			parameters.put("target", targetDirectory.getAbsolutePath());
 
 			File configFile = new File(templateDirectory, CONFIG_FILE);
 			if (configFile.exists()) {
