@@ -47,4 +47,23 @@ class ConfigurationTest extends Specification {
 				lajos: "geza",
 		]
 	}
+
+	def "parameter using other parameter"() {
+		def config = new Configuration()
+		config.parameters {
+			moduleName {
+				value { 12 }
+			}
+			moduleLongName {
+				value { moduleName + 5 }
+			}
+		}
+		def input = new BufferedReader(new StringReader(""))
+
+		expect:
+		config.parameters.resolve(input) == [
+		        moduleName: 12,
+				moduleLongName: 17,
+		]
+	}
 }

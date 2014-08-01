@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class ParameterContainer extends GroovyObjectSupport {
 	private final Map<String, Parameter> parameters = Maps.newLinkedHashMap();
-	private final Map<String, Object> values = Maps.newLinkedHashMap();
+	private Map<String, Object> resolvedValues;
 
 	@SuppressWarnings("UnusedDeclaration")
 	public Object methodMissing(String name, Object args) {
@@ -24,75 +24,77 @@ public class ParameterContainer extends GroovyObjectSupport {
 		Parameter parameter = new Parameter(name);
 		parameters.put(name, parameter);
 		closure.setDelegate(parameter);
-		closure.setResolveStrategy(Closure.DELEGATE_FIRST);
+		closure.setResolveStrategy(Closure.DELEGATE_ONLY);
 		return closure.call(parameter);
 	}
 
 	@SuppressWarnings("UnusedDeclaration")
 	public Object propertyMissing(String name) {
-		if (values.containsKey(name)) {
-			return values.get(name);
+		if (resolvedValues.containsKey(name)) {
+			return resolvedValues.get(name);
 		}
 		throw new MissingPropertyException(name, ParameterContainer.class);
 	}
 
 	public Map<String, Object> resolve(BufferedReader input) throws IOException {
-		Map<String, Object> resolved = Maps.newLinkedHashMap();
-		for (Parameter parameter : parameters.values()) {
-			String title = parameter.getTitle();
-			if (Strings.isNullOrEmpty(title)) {
-				title = parameter.getName();
-			}
-			String description = parameter.getDescription();
-			boolean required = parameter.isRequired();
-			Object value = getParameterDefaultValue(parameter);
-			if (parameter.isPrompt()) {
-				StringBuilder prompt = new StringBuilder();
-				if (description != null) {
-					prompt.append(description).append(System.lineSeparator());
+		if (resolvedValues == null) {
+			resolvedValues = Maps.newLinkedHashMap();
+			for (Parameter parameter : parameters.values()) {
+				String title = parameter.getTitle();
+				if (Strings.isNullOrEmpty(title)) {
+					title = parameter.getName();
 				}
-				prompt.append(title);
-				if (required) {
-					prompt.append(" (required)");
-				}
-				if (value != null) {
-					prompt.append(" [").append(value).append(']');
-				}
-				prompt.append(": ");
-
-				while (true) {
-					System.out.print(prompt);
-					String userInput = input.readLine();
-					if (Strings.isNullOrEmpty(userInput)) {
-						if (required && value == null) {
-							System.out.println("Parameter '" + parameter + "' is required.");
-							continue;
-						}
-					} else {
-						Class<?> type = parameter.getType();
-						if (type == null && value != null) {
-							type = value.getClass();
-						} else {
-							type = String.class;
-						}
-						value = StringGroovyMethods.asType(userInput, type);
+				String description = parameter.getDescription();
+				boolean required = parameter.isRequired();
+				Object value = getParameterValue(parameter);
+				if (parameter.isPrompt()) {
+					StringBuilder prompt = new StringBuilder();
+					if (description != null) {
+						prompt.append(description).append(System.lineSeparator());
 					}
-					break;
+					prompt.append(title);
+					if (required) {
+						prompt.append(" (required)");
+					}
+					if (value != null) {
+						prompt.append(" [").append(value).append(']');
+					}
+					prompt.append(": ");
+
+					while (true) {
+						System.out.print(prompt);
+						String userInput = input.readLine();
+						if (Strings.isNullOrEmpty(userInput)) {
+							if (required && value == null) {
+								System.out.println("Parameter '" + parameter + "' is required.");
+								continue;
+							}
+						} else {
+							Class<?> type = parameter.getType();
+							if (type == null && value != null) {
+								type = value.getClass();
+							} else {
+								type = String.class;
+							}
+							value = StringGroovyMethods.asType(userInput, type);
+						}
+						break;
+					}
 				}
+				resolvedValues.put(parameter.getName(), value);
 			}
-			resolved.put(parameter.getName(), value);
 		}
-		return resolved;
+		return resolvedValues;
 	}
 
-	private Object getParameterDefaultValue(Parameter parameter) {
+	private Object getParameterValue(Parameter parameter) {
 		Closure<?> value = parameter.getValue();
 		if (value == null) {
 			return null;
 		}
 		Closure<?> clone = (Closure<?>) value.clone();
-		clone.setDelegate(parameters);
-		clone.setResolveStrategy(Closure.DELEGATE_FIRST);
+		clone.setDelegate(this);
+		clone.setResolveStrategy(Closure.DELEGATE_ONLY);
 		return clone.call();
 	}
 }

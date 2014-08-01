@@ -24,7 +24,7 @@ public class Configurator {
 
 		String script = "def closure = { " + configuration + " };"
 			+ "closure.setDelegate(configuration);"
-			+ "closure.setResolveStrategy(Closure.DELEGATE_FIRST);"
+			+ "closure.setResolveStrategy(Closure.DELEGATE_ONLY);"
 			+ "closure.call(configuration);"
 			+ "return configuration;";
 		return (Configuration) shell.evaluate(script);
