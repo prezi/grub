@@ -17,32 +17,34 @@ import java.io.Writer;
 import java.util.Map;
 
 public class ProcessTemplateFiles extends DefaultTask {
-	private File template;
-	private File target;
+	private File templateDirectory;
+	private File targetDirectory;
 
 	@InputDirectory
-	public File getTemplate() {
-		return template;
+	public File getTemplateDirectory() {
+		return templateDirectory;
 	}
 
-	public void setTemplate(File template) {
-		this.template = template;
+	public void setTemplateDirectory(File templateDirectory) {
+		this.templateDirectory = templateDirectory;
 	}
 
 	@OutputDirectory
-	public File getTarget() {
-		return target;
+	public File getTargetDirectory() {
+		return targetDirectory;
 	}
 
-	public void setTarget(File target) {
-		this.target = target;
+	public void setTargetDirectory(File targetDirectory) {
+		this.targetDirectory = targetDirectory;
 	}
 
 	private final GStringTemplateEngine engine = new GStringTemplateEngine();
 
 	@TaskAction
 	public void copy() throws Exception {
-		copyChildren(new File(getTemplate(), "src/main/grub"), getTarget());
+		if (getTemplateDirectory().exists()) {
+			copyChildren(getTemplateDirectory(), getTargetDirectory());
+		}
 	}
 
 	private void copyChildren(File templateDir, File targetDir) throws Exception {
