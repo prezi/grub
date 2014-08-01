@@ -84,22 +84,20 @@ public class GenerateCommand implements Callable<Integer> {
 					new File(System.getProperty("user.dir")),
 					Arrays.asList("git", "clone", template, templateDir.getPath()));
 
-			File templateGrubFile = new File(templateDir, GRUB_FILE);
-			if (!templateGrubFile.isFile()) {
+			File grubFile = new File(templateDir, GRUB_FILE);
+			if (!grubFile.isFile()) {
 				throw new GrubException("Cannot find 'template.grub' in template " + template);
 			}
 
 			FileUtils.deleteDirectory(targetDirectory);
 			FileUtils.forceMkdir(targetDirectory);
-			File targetGrubFile = new File(targetDirectory, GRUB_FILE);
-			Files.copy(templateGrubFile, targetGrubFile);
-			logger.debug("Using {} as grub", targetGrubFile);
 
 			Map<String, String> properties = Maps.newLinkedHashMap();
 			properties.put("target", targetDirectory.getPath());
 
 			File configFile = new File(templateDir, CONFIG_FILE);
 			if (configFile.exists()) {
+				logger.debug("Loading configuration from {}", configFile);
 				HierarchicalINIConfiguration config = new HierarchicalINIConfiguration(configFile);
 				for (String property : config.getSections()) {
 					SubnodeConfiguration propertySection = config.getSection(property);
@@ -144,6 +142,8 @@ public class GenerateCommand implements Callable<Integer> {
 					}
 					properties.put(property, value);
 				}
+			} else {
+				logger.debug("No grub configuration file found");
 			}
 
 			logger.info("Generating template");
@@ -156,7 +156,7 @@ public class GenerateCommand implements Callable<Integer> {
 				} else {
 					args.add("--quiet");
 				}
-				args.add("--build-file", GRUB_FILE);
+				args.add("--build-file", grubFile.getPath());
 				for (Map.Entry<String, String> property : properties.entrySet()) {
 					args.add("-P" + property.getKey() + "=" + property.getValue());
 				}
@@ -169,7 +169,7 @@ public class GenerateCommand implements Callable<Integer> {
 			} finally {
 				connection.close();
 			}
-			FileUtils.deleteQuietly(templateGrubFile);
+			FileUtils.deleteQuietly(grubFile);
 		} finally {
 			FileUtils.deleteDirectory(templateDir);
 		}
