@@ -53,11 +53,6 @@ project("grub") {
 		compile "io.airlift:airline:0.6"
 		compile "ch.qos.logback:logback-classic:1.1.2"
 		compile "org.codehaus.groovy:groovy-all:2.3.3"
-
-		compile "commons-configuration:commons-configuration:1.10", {
-			exclude group: "commons-logging"
-		}
-		compile "org.slf4j:jcl-over-slf4j:1.7.7"
 	}
 
 	processResources {

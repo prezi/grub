@@ -1,19 +1,17 @@
 package com.prezi.grub.commands;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import com.prezi.grub.GrubException;
+import com.prezi.grub.config.Configuration;
+import com.prezi.grub.config.Configurator;
 import com.prezi.grub.internal.ProcessUtils;
-import groovy.text.GStringTemplateEngine;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
-import org.apache.commons.configuration.HierarchicalINIConfiguration;
-import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
@@ -22,10 +20,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -82,7 +78,6 @@ public class GenerateCommand implements Callable<Integer> {
 			throw new GrubException("Target directory already exists: " + targetDirectory);
 		}
 
-		GStringTemplateEngine engine = new GStringTemplateEngine();
 		BufferedReader input = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
 
 		File templateDirectory = Files.createTempDir();
@@ -104,62 +99,16 @@ public class GenerateCommand implements Callable<Integer> {
 			FileUtils.deleteDirectory(targetDirectory);
 			FileUtils.forceMkdir(targetDirectory);
 
-			Map<String, String> properties = Maps.newLinkedHashMap();
-			properties.put("template", templateDirectory.getAbsolutePath());
-			properties.put("target", targetDirectory.getAbsolutePath());
+			Map<String, Object> parameters = Maps.newLinkedHashMap();
+			parameters.put("template", templateDirectory);
+			parameters.put("target", targetDirectory);
 
 			File configFile = new File(templateDirectory, CONFIG_FILE);
 			if (configFile.exists()) {
 				logger.debug("Loading configuration from {}", configFile);
-				HierarchicalINIConfiguration config = new HierarchicalINIConfiguration(configFile);
-				for (String property : config.getSections()) {
-					SubnodeConfiguration propertySection = config.getSection(property);
-
-					String title = propertySection.getString("title", property);
-					String description = propertySection.getString("description", null);
-					boolean required = propertySection.getBoolean("required", true);
-					String value = propertySection.getString("value", null);
-					if (value != null) {
-						// Process value
-						value = processValue(property, engine, properties, value);
-					} else {
-						String defaultValue = propertySection.getString("default", null);
-						// Process default value
-						if (defaultValue != null) {
-							defaultValue = processValue(property, engine, properties, defaultValue);
-						}
-
-						StringBuilder prompt = new StringBuilder();
-						if (description != null) {
-							prompt.append(description).append(System.lineSeparator());
-						}
-						prompt.append(title);
-						if (required) {
-							prompt.append(" (required)");
-						}
-						if (defaultValue != null) {
-							prompt.append(" [").append(defaultValue).append(']');
-						}
-						prompt.append(": ");
-
-						while (true) {
-							System.out.print(prompt);
-							value = input.readLine();
-							if (Strings.isNullOrEmpty(value)) {
-								if (defaultValue == null) {
-									if (required) {
-										System.out.println("Property \"" + property + "\" is required.");
-										continue;
-									}
-								} else {
-									value = defaultValue;
-								}
-							}
-							break;
-						}
-					}
-					properties.put(property, value);
-				}
+				Configuration configuration = Configurator.loadConfiguration(configFile);
+				Map<String, Object> resolved = configuration.resolve(input);
+				parameters.putAll(resolved);
 			} else {
 				logger.debug("No grub configuration file found");
 			}
@@ -176,7 +125,7 @@ public class GenerateCommand implements Callable<Integer> {
 				}
 				args.add("--init-script", initGrub.getPath());
 				args.add("--build-file", grubFile.getPath());
-				for (Map.Entry<String, String> property : properties.entrySet()) {
+				for (Map.Entry<String, Object> property : parameters.entrySet()) {
 					args.add("-P" + property.getKey() + "=" + property.getValue());
 				}
 
@@ -197,17 +146,5 @@ public class GenerateCommand implements Callable<Integer> {
 			}
 		}
 		return 0;
-	}
-
-	private String processValue(String property, GStringTemplateEngine engine, Map<String, String> properties, String value) throws ClassNotFoundException, IOException {
-		try {
-			LinkedHashMap<String, String> bindings = Maps.newLinkedHashMap(properties);
-			logger.debug("Processing property '{}' with value '{}'", value);
-			String result = engine.createTemplate(value).make(bindings).toString();
-			logger.debug("Result: {}", result);
-			return result;
-		} catch (Exception ex) {
-			throw new GrubException("Could not parse property " + property, ex);
-		}
 	}
 }
