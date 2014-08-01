@@ -1,0 +1,75 @@
+String gitVersion
+if (hasProperty("release")) {
+	gitVersion = ["git", "describe", "--match", "[0-9]*", "--dirty"].execute().text.trim()
+} else {
+	gitVersion = ["git", "describe", "--match", "[0-9]*", "--abbrev=0"].execute().text.trim() + "-SNAPSHOT"
+}
+
+task version {
+	doLast {
+		println "Version: ${gitVersion}"
+	}
+}
+
+group = "com.prezi.grub"
+version = gitVersion
+
+apply plugin: "java"
+apply plugin: "idea"
+
+apply plugin: "application"
+mainClassName = "com.prezi.grub.GrubCli"
+
+repositories {
+	mavenCentral()
+	maven {
+		url "http://gradle.artifactoryonline.com/gradle/libs"
+	}
+}
+
+dependencies {
+	compile "org.gradle:gradle-tooling-api:2.0"
+	compile "io.airlift:airline:0.6"
+	compile "ch.qos.logback:logback-classic:1.1.2"
+	compile "commons-io:commons-io:2.4"
+	compile "com.google.guava:guava:17.0"
+
+	testCompile "junit:junit:4.11"
+	testCompile("org.spockframework:spock-core:0.7-groovy-2.0") {
+		exclude group: "org.codehaus.groovy"
+	}
+	testRuntime "org.slf4j:slf4j-simple:1.7.7"
+}
+
+processResources {
+	inputs.property "version", version
+	filter org.apache.tools.ant.filters.ReplaceTokens, tokens: [
+			version: version
+	]
+}
+
+configure(applicationDistribution) {
+	from(rootProject.file("README.md")) {
+		into "/"
+	}
+	from(rootProject.file("LICENSE.txt")) {
+		into "/"
+	}
+}
+
+artifacts {
+	archives(distZip) {
+		classifier "dist"
+	}
+}
+
+allprojects {
+	tasks.withType(Upload).all { task -> task.dependsOn "check" }
+	tasks.withType(JavaCompile) {
+		options.compilerArgs << "-Xlint:unchecked"
+	}
+}
+
+task wrapper(type: Wrapper) {
+	gradleVersion = "2.0"
+}
