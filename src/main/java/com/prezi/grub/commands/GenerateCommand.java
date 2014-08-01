@@ -3,7 +3,6 @@ package com.prezi.grub.commands;
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.prezi.grub.GrubException;
@@ -24,7 +23,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -153,6 +151,11 @@ public class GenerateCommand implements Callable<Integer> {
 			ProjectConnection connection = connector.forProjectDirectory(targetDirectory).connect();
 			try {
 				ImmutableList.Builder<String> args = ImmutableList.builder();
+				if (verbose) {
+					args.add("--info");
+				} else {
+					args.add("--quiet");
+				}
 				args.add("--build-file", GRUB_FILE);
 				for (Map.Entry<String, String> property : properties.entrySet()) {
 					args.add("-P" + property.getKey() + "=" + property.getValue());
