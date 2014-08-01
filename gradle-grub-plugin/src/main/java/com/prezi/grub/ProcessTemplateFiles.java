@@ -1,5 +1,6 @@
 package com.prezi.grub;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import groovy.text.GStringTemplateEngine;
@@ -11,6 +12,8 @@ import org.gradle.api.tasks.TaskAction;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
 import java.util.Map;
 
 public class ProcessTemplateFiles extends DefaultTask {
@@ -53,21 +56,34 @@ public class ProcessTemplateFiles extends DefaultTask {
 				continue;
 			}
 			File templateChild = new File(templateDir, childName);
-			String targetName = processName(childName);
+			String targetName = engine.createTemplate(childName).make(createBindings()).toString();
 			File targetChild = new File(targetDir, targetName);
 
 			if (templateChild.isDirectory()) {
 				FileUtils.forceMkdir(targetChild);
 				copyChildren(templateChild, targetChild);
 			} else if (templateChild.isFile()) {
-				Files.copy(templateChild, targetChild);
+				Reader reader = Files.asCharSource(templateChild, Charsets.UTF_8).openStream();
+				try {
+					Writer writer = Files.asCharSink(targetChild, Charsets.UTF_8).openStream();
+					try {
+						engine.createTemplate(reader).make(createBindings()).writeTo(writer);
+					} finally {
+						writer.close();
+					}
+				} finally {
+					reader.close();
+				}
 			}
 		}
 	}
 
-	private String processName(String name) throws Exception {
+	private Map<String, Object> createBindings() {
 		Map<String, Object> binding = Maps.newHashMap();
 		binding.put("project", getProject());
-		return engine.createTemplate(name).make(binding).toString();
+		for (Map.Entry<String, ?> entry : getProject().getProperties().entrySet()) {
+			binding.put(entry.getKey(), entry.getValue());
+		}
+		return binding;
 	}
 }

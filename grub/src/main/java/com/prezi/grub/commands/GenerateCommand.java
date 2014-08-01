@@ -22,8 +22,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -116,40 +118,45 @@ public class GenerateCommand implements Callable<Integer> {
 					String title = propertySection.getString("title", property);
 					String description = propertySection.getString("description", null);
 					boolean required = propertySection.getBoolean("required", true);
-					String defaultValue = propertySection.getString("default", null);
-					// Process default value
-					if (defaultValue != null) {
-						defaultValue = engine.createTemplate(defaultValue).make().toString();
-					}
-
-					StringBuilder prompt = new StringBuilder();
-					if (description != null) {
-						prompt.append(description).append(System.lineSeparator());
-					}
-					prompt.append(title);
-					if (required) {
-						prompt.append(" (required)");
-					}
-					if (defaultValue != null) {
-						prompt.append(" [").append(defaultValue).append(']');
-					}
-					prompt.append(": ");
-
-					String value;
-					while (true) {
-						System.out.print(prompt);
-						value = input.readLine();
-						if (Strings.isNullOrEmpty(value)) {
-							if (defaultValue == null) {
-								if (required) {
-									System.out.println("Property \"" + property + "\" is required.");
-									continue;
-								}
-							} else {
-								value = defaultValue;
-							}
+					String value = propertySection.getString("value", null);
+					if (value != null) {
+						// Process value
+						value = processValue(property, engine, properties, value);
+					} else {
+						String defaultValue = propertySection.getString("default", null);
+						// Process default value
+						if (defaultValue != null) {
+							defaultValue = processValue(property, engine, properties, defaultValue);
 						}
-						break;
+
+						StringBuilder prompt = new StringBuilder();
+						if (description != null) {
+							prompt.append(description).append(System.lineSeparator());
+						}
+						prompt.append(title);
+						if (required) {
+							prompt.append(" (required)");
+						}
+						if (defaultValue != null) {
+							prompt.append(" [").append(defaultValue).append(']');
+						}
+						prompt.append(": ");
+
+						while (true) {
+							System.out.print(prompt);
+							value = input.readLine();
+							if (Strings.isNullOrEmpty(value)) {
+								if (defaultValue == null) {
+									if (required) {
+										System.out.println("Property \"" + property + "\" is required.");
+										continue;
+									}
+								} else {
+									value = defaultValue;
+								}
+							}
+							break;
+						}
 					}
 					properties.put(property, value);
 				}
@@ -190,5 +197,17 @@ public class GenerateCommand implements Callable<Integer> {
 			}
 		}
 		return 0;
+	}
+
+	private String processValue(String property, GStringTemplateEngine engine, Map<String, String> properties, String value) throws ClassNotFoundException, IOException {
+		try {
+			LinkedHashMap<String, String> bindings = Maps.newLinkedHashMap(properties);
+			logger.debug("Processing property '{}' with value '{}'", value);
+			String result = engine.createTemplate(value).make(bindings).toString();
+			logger.debug("Result: {}", result);
+			return result;
+		} catch (Exception ex) {
+			throw new GrubException("Could not parse property " + property, ex);
+		}
 	}
 }
