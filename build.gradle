@@ -13,11 +13,16 @@ task version {
 
 group = "com.prezi.grub"
 version = gitVersion
+description = "Grub creates projects from templates"
 
-apply plugin: "java"
 apply plugin: "idea"
-
+apply plugin: "maven"
+apply plugin: "groovy"
 apply plugin: "application"
+
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
 mainClassName = "com.prezi.grub.GrubCli"
 
 repositories {
@@ -33,6 +38,12 @@ dependencies {
 	compile "ch.qos.logback:logback-classic:1.1.2"
 	compile "commons-io:commons-io:2.4"
 	compile "com.google.guava:guava:17.0"
+	compile "org.codehaus.groovy:groovy-all:2.3.3"
+
+	compile "commons-configuration:commons-configuration:1.10", {
+		exclude group: "commons-logging"
+	}
+	compile "org.slf4j:jcl-over-slf4j:1.7.7"
 
 	testCompile "junit:junit:4.11"
 	testCompile("org.spockframework:spock-core:0.7-groovy-2.0") {

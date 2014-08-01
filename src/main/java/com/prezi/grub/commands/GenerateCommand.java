@@ -1,18 +1,38 @@
 package com.prezi.grub.commands;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.io.Files;
+import com.prezi.grub.GrubException;
+import com.prezi.grub.internal.ProcessUtils;
+import groovy.text.GStringTemplateEngine;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
+import org.apache.commons.configuration.HierarchicalINIConfiguration;
+import org.apache.commons.configuration.SubnodeConfiguration;
+import org.apache.commons.io.FileUtils;
 import org.gradle.tooling.GradleConnector;
+import org.gradle.tooling.ProjectConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 @Command(name = "generate", description = "Generate a new project")
 public class GenerateCommand implements Callable<Integer> {
 	protected static final Logger logger = LoggerFactory.getLogger(GenerateCommand.class);
+	private static final String CONFIG_FILE = "grub.ini";
+	public static final String GRUB_FILE = "template.grub";
 
 	@Option(name = {"-v", "--verbose"},
 			description = "Verbose mode")
@@ -27,6 +47,10 @@ public class GenerateCommand implements Callable<Integer> {
 			description = "Target directory to create the project in")
 	private File targetDirectory;
 
+	@Option(name = {"-f", "--force"},
+			description = "Overwrite existing target directory")
+	private boolean force;
+
 	@Arguments(title = "template",
 			description = "URL of the template",
 			required = true)
@@ -34,7 +58,7 @@ public class GenerateCommand implements Callable<Integer> {
 
 	protected File getTargetDirectory() {
 		File directory = targetDirectory;
-		return directory != null ? directory : new File(System.getProperty("user.dir"));
+		return directory != null ? directory : new File(System.getProperty("user.dir") + "/" + template);
 	}
 
 	public boolean isVerbose() {
@@ -47,7 +71,105 @@ public class GenerateCommand implements Callable<Integer> {
 
 	@Override
 	public Integer call() throws Exception {
-		GradleConnector connector = GradleConnector.newConnector();
+		File targetDirectory = getTargetDirectory();
+		if (!force && targetDirectory.exists() && !targetDirectory.equals(new File(System.getProperty("user.dir")))) {
+			throw new GrubException("Target directory already exists: " + targetDirectory);
+		}
+
+		GStringTemplateEngine engine = new GStringTemplateEngine();
+		BufferedReader input = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
+
+		File templateDir = Files.createTempDir();
+		try {
+			logger.info("Cloning template");
+			ProcessUtils.executeIn(
+					new File(System.getProperty("user.dir")),
+					Arrays.asList("git", "clone", template, templateDir.getPath()));
+
+			File templateGrubFile = new File(templateDir, GRUB_FILE);
+			if (!templateGrubFile.isFile()) {
+				throw new GrubException("Cannot find 'template.grub' in template " + template);
+			}
+
+			FileUtils.deleteDirectory(targetDirectory);
+			FileUtils.forceMkdir(targetDirectory);
+			File targetGrubFile = new File(targetDirectory, GRUB_FILE);
+			Files.copy(templateGrubFile, targetGrubFile);
+			logger.debug("Using {} as grub", targetGrubFile);
+
+			Map<String, String> properties = Maps.newLinkedHashMap();
+			properties.put("target", targetDirectory.getPath());
+
+			File configFile = new File(templateDir, CONFIG_FILE);
+			if (configFile.exists()) {
+				HierarchicalINIConfiguration config = new HierarchicalINIConfiguration(configFile);
+				for (String property : config.getSections()) {
+					SubnodeConfiguration propertySection = config.getSection(property);
+
+					String title = propertySection.getString("title", property);
+					String description = propertySection.getString("description", null);
+					boolean required = propertySection.getBoolean("required", true);
+					String defaultValue = propertySection.getString("default", null);
+					// Process default value
+					if (defaultValue != null) {
+						defaultValue = engine.createTemplate(defaultValue).make().toString();
+					}
+
+					StringBuilder prompt = new StringBuilder();
+					if (description != null) {
+						prompt.append(description).append(System.lineSeparator());
+					}
+					prompt.append(title);
+					if (required) {
+						prompt.append(" (required)");
+					}
+					if (defaultValue != null) {
+						prompt.append(" [").append(defaultValue).append(']');
+					}
+					prompt.append(": ");
+
+					String value;
+					while (true) {
+						System.out.print(prompt);
+						value = input.readLine();
+						if (Strings.isNullOrEmpty(value)) {
+							if (defaultValue == null) {
+								if (required) {
+									System.out.println("Property \"" + property + "\" is required.");
+									continue;
+								}
+							} else {
+								value = defaultValue;
+							}
+						}
+						break;
+					}
+					properties.put(property, value);
+				}
+			}
+
+			logger.info("Generating template");
+			GradleConnector connector = GradleConnector.newConnector();
+			ProjectConnection connection = connector.forProjectDirectory(targetDirectory).connect();
+			try {
+				ImmutableList.Builder<String> args = ImmutableList.builder();
+				args.add("--build-file", GRUB_FILE);
+				for (Map.Entry<String, String> property : properties.entrySet()) {
+					args.add("-P" + property.getKey() + "=" + property.getValue());
+				}
+
+				ImmutableList<String> arguments = args.build();
+				connection.newBuild()
+						.withArguments(arguments.toArray(new String[arguments.size()]))
+						.forTasks("generate")
+						.run();
+			} finally {
+				connection.close();
+			}
+			FileUtils.deleteQuietly(templateGrubFile);
+		} finally {
+			FileUtils.deleteDirectory(templateDir);
+		}
 		return 0;
 	}
 }
