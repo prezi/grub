@@ -1,0 +1,11 @@
+allprojects {
+	buildscript {
+		repositories {
+			mavenLocal()
+			mavenCentral()
+		}
+		dependencies {
+			classpath "com.prezi.grub:gradle-grub-plugin:@version@"
+		}
+	}
+}

@@ -11,66 +11,81 @@ task version {
 	}
 }
 
-group = "com.prezi.grub"
-version = gitVersion
-description = "Grub creates projects from templates"
+allprojects {
+	group = "com.prezi.grub"
+	version = gitVersion
+	description = "Grub creates projects from templates"
+}
 
-apply plugin: "idea"
-apply plugin: "maven"
-apply plugin: "groovy"
-apply plugin: "application"
+subprojects {
+	apply plugin: "idea"
+	apply plugin: "maven"
+	apply plugin: "groovy"
 
-sourceCompatibility = 1.6
-targetCompatibility = 1.6
+	sourceCompatibility = 1.6
+	targetCompatibility = 1.6
 
-mainClassName = "com.prezi.grub.GrubCli"
+	repositories {
+		mavenCentral()
+		maven {
+			url "http://gradle.artifactoryonline.com/gradle/libs"
+		}
+	}
 
-repositories {
-	mavenCentral()
-	maven {
-		url "http://gradle.artifactoryonline.com/gradle/libs"
+	dependencies {
+		compile "commons-io:commons-io:2.4"
+		compile "com.google.guava:guava:17.0"
+		compile "org.slf4j:slf4j-api:1.7.7"
+
+		testCompile "junit:junit:4.11"
+		testCompile("org.spockframework:spock-core:0.7-groovy-2.0") {
+			exclude group: "org.codehaus.groovy"
+		}
 	}
 }
 
-dependencies {
-	compile "org.gradle:gradle-tooling-api:2.0"
-	compile "io.airlift:airline:0.6"
-	compile "ch.qos.logback:logback-classic:1.1.2"
-	compile "commons-io:commons-io:2.4"
-	compile "com.google.guava:guava:17.0"
-	compile "org.codehaus.groovy:groovy-all:2.3.3"
+project("grub") {
+	apply plugin: "application"
+	mainClassName = "com.prezi.grub.GrubCli"
 
-	compile "commons-configuration:commons-configuration:1.10", {
-		exclude group: "commons-logging"
-	}
-	compile "org.slf4j:jcl-over-slf4j:1.7.7"
+	dependencies {
+		compile "org.gradle:gradle-tooling-api:2.0"
+		compile "io.airlift:airline:0.6"
+		compile "ch.qos.logback:logback-classic:1.1.2"
+		compile "org.codehaus.groovy:groovy-all:2.3.3"
 
-	testCompile "junit:junit:4.11"
-	testCompile("org.spockframework:spock-core:0.7-groovy-2.0") {
-		exclude group: "org.codehaus.groovy"
+		compile "commons-configuration:commons-configuration:1.10", {
+			exclude group: "commons-logging"
+		}
+		compile "org.slf4j:jcl-over-slf4j:1.7.7"
 	}
-	testRuntime "org.slf4j:slf4j-simple:1.7.7"
+
+	processResources {
+		inputs.property "version", version
+		filter org.apache.tools.ant.filters.ReplaceTokens, tokens: [
+				version: version
+		]
+	}
+
+	configure(applicationDistribution) {
+		from(rootProject.file("README.md")) {
+			into "/"
+		}
+		from(rootProject.file("LICENSE.txt")) {
+			into "/"
+		}
+	}
+
+	artifacts {
+		archives(distZip) {
+			classifier "dist"
+		}
+	}
 }
 
-processResources {
-	inputs.property "version", version
-	filter org.apache.tools.ant.filters.ReplaceTokens, tokens: [
-			version: version
-	]
-}
-
-configure(applicationDistribution) {
-	from(rootProject.file("README.md")) {
-		into "/"
-	}
-	from(rootProject.file("LICENSE.txt")) {
-		into "/"
-	}
-}
-
-artifacts {
-	archives(distZip) {
-		classifier "dist"
+project("gradle-grub-plugin") {
+	dependencies {
+		compile gradleApi()
 	}
 }
 

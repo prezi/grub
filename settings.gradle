@@ -1,0 +1,3 @@
+rootProject.name = "grub-parent"
+include "gradle-grub-plugin"
+include "grub"

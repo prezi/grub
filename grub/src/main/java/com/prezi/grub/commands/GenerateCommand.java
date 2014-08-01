@@ -5,6 +5,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
+import com.google.common.io.Resources;
 import com.prezi.grub.GrubException;
 import com.prezi.grub.internal.ProcessUtils;
 import groovy.text.GStringTemplateEngine;
@@ -31,6 +32,7 @@ public class GenerateCommand implements Callable<Integer> {
 	protected static final Logger logger = LoggerFactory.getLogger(GenerateCommand.class);
 	private static final String CONFIG_FILE = "grub.ini";
 	public static final String GRUB_FILE = "template.grub";
+	private static final String INIT_GRUB = "init.grub";
 
 	@Option(name = {"-v", "--verbose"},
 			description = "Verbose mode")
@@ -48,6 +50,10 @@ public class GenerateCommand implements Callable<Integer> {
 	@Option(name = {"-f", "--force"},
 			description = "Overwrite existing target directory")
 	private boolean force;
+
+	@Option(name = {"--debug"},
+			description = "Turn on debug mode")
+	private boolean debug;
 
 	@Arguments(title = "template",
 			description = "URL of the template",
@@ -77,25 +83,30 @@ public class GenerateCommand implements Callable<Integer> {
 		GStringTemplateEngine engine = new GStringTemplateEngine();
 		BufferedReader input = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
 
-		File templateDir = Files.createTempDir();
+		File templateDirectory = Files.createTempDir();
 		try {
 			logger.info("Cloning template");
 			ProcessUtils.executeIn(
 					new File(System.getProperty("user.dir")),
-					Arrays.asList("git", "clone", template, templateDir.getPath()));
+					Arrays.asList("git", "clone", template, templateDirectory.getPath()));
 
-			File grubFile = new File(templateDir, GRUB_FILE);
+			File grubFile = new File(templateDirectory, GRUB_FILE);
 			if (!grubFile.isFile()) {
 				throw new GrubException("Cannot find 'template.grub' in template " + template);
 			}
+
+			// Adding init.grub
+			File initGrub = new File(templateDirectory, INIT_GRUB);
+			Resources.asByteSource(Resources.getResource(INIT_GRUB)).copyTo(Files.asByteSink(initGrub));
 
 			FileUtils.deleteDirectory(targetDirectory);
 			FileUtils.forceMkdir(targetDirectory);
 
 			Map<String, String> properties = Maps.newLinkedHashMap();
-			properties.put("target", targetDirectory.getPath());
+			properties.put("template", templateDirectory.getAbsolutePath());
+			properties.put("target", targetDirectory.getAbsolutePath());
 
-			File configFile = new File(templateDir, CONFIG_FILE);
+			File configFile = new File(templateDirectory, CONFIG_FILE);
 			if (configFile.exists()) {
 				logger.debug("Loading configuration from {}", configFile);
 				HierarchicalINIConfiguration config = new HierarchicalINIConfiguration(configFile);
@@ -156,6 +167,7 @@ public class GenerateCommand implements Callable<Integer> {
 				} else {
 					args.add("--quiet");
 				}
+				args.add("--init-script", initGrub.getPath());
 				args.add("--build-file", grubFile.getPath());
 				for (Map.Entry<String, String> property : properties.entrySet()) {
 					args.add("-P" + property.getKey() + "=" + property.getValue());
@@ -171,7 +183,11 @@ public class GenerateCommand implements Callable<Integer> {
 			}
 			FileUtils.deleteQuietly(grubFile);
 		} finally {
-			FileUtils.deleteDirectory(templateDir);
+			if (!debug) {
+				FileUtils.deleteDirectory(templateDirectory);
+			} else {
+				logger.debug("Leaving template directory untouched: {}", templateDirectory);
+			}
 		}
 		return 0;
 	}
