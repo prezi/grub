@@ -13,12 +13,12 @@ public class GrubPlugin implements Plugin<Project> {
 		final GrubConvention convention = new GrubConvention();
 		project.getConvention().getPlugins().put("grub", convention);
 
-		ProcessTemplateFiles processTemplateFiles = project.getTasks().create("processTemplateFiles", ProcessTemplateFiles.class);
-		processTemplateFiles.setTemplateDirectory(project.file(project.property("template") + "/src/main/grub"));
-		processTemplateFiles.setTargetDirectory(project.file(project.property("target")));
+		ProcessTemplateFiles processDefaultTemplateFiles = project.getTasks().create("processDefaultTemplateFiles", ProcessTemplateFiles.class);
+		processDefaultTemplateFiles.setTemplateDirectory(project.file(project.property("template") + "/src/main/grub"));
+		processDefaultTemplateFiles.setTargetDirectory(project.file(project.property("target")));
 
-		Task generateTask = project.getTasks().create("generate");
-		generateTask.dependsOn(processTemplateFiles);
+		Task generateTask = project.getTasks().create("processTemplate");
+		generateTask.dependsOn(processDefaultTemplateFiles);
 		
 		project.afterEvaluate(new Action<Project>() {
 			@Override

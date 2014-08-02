@@ -147,7 +147,7 @@ public class GenerateCommand implements Callable<Integer> {
 				ImmutableList<String> arguments = args.build();
 				connection.newBuild()
 						.withArguments(arguments.toArray(new String[arguments.size()]))
-						.forTasks("generate")
+						.forTasks("processTemplate")
 						.run();
 			} finally {
 				connection.close();
