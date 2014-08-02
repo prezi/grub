@@ -93,12 +93,8 @@ public class GenerateCommand implements Callable<Integer> {
 				throw new GrubException("Cannot find 'template.grub' in template " + template);
 			}
 
-			// Create .grub dir
-			File templateGrubDir = new File(templateDirectory, ".grub");
-			FileUtils.forceMkdir(templateGrubDir);
-
 			// Adding init.grub
-			File initGrub = new File(templateGrubDir, INIT_GRUB);
+			File initGrub = new File(templateDirectory, INIT_GRUB);
 			Resources.asByteSource(Resources.getResource(INIT_GRUB)).copyTo(Files.asByteSink(initGrub));
 
 			FileUtils.deleteDirectory(targetDirectory);
@@ -114,7 +110,14 @@ public class GenerateCommand implements Callable<Integer> {
 			parameters.putAll(resolved);
 
 			// Add prefix to template.grub
-			File processedGrubFile = new File(templateGrubDir, GRUB_FILE);
+			File processedGrubFile = new File(targetDirectory, GRUB_FILE);
+			if (processedGrubFile.exists()) {
+				if (!force) {
+					throw new GrubException("Grub file already exists in target directory: " + processedGrubFile);
+				} else {
+					FileUtils.forceDelete(processedGrubFile);
+				}
+			}
 			CharSink processedGrubSink = Files.asCharSink(processedGrubFile, Charsets.UTF_8, FileWriteMode.APPEND);
 			processedGrubSink.write("apply plugin: 'grub';");
 			Files.asCharSource(grubFile, Charsets.UTF_8).copyTo(processedGrubSink);
@@ -130,7 +133,7 @@ public class GenerateCommand implements Callable<Integer> {
 					args.add("--quiet");
 				}
 				args.add("--init-script", initGrub.getPath());
-				args.add("--build-file", processedGrubFile.getPath());
+				args.add("--build-file", processedGrubFile.getAbsolutePath());
 				for (Map.Entry<String, Object> property : parameters.entrySet()) {
 					args.add("-P" + property.getKey() + "=" + property.getValue());
 				}
@@ -143,7 +146,10 @@ public class GenerateCommand implements Callable<Integer> {
 			} finally {
 				connection.close();
 			}
-			FileUtils.deleteQuietly(grubFile);
+
+			if (!debug) {
+				FileUtils.deleteQuietly(processedGrubFile);
+			}
 		} finally {
 			if (!debug) {
 				FileUtils.deleteDirectory(templateDirectory);
