@@ -22,7 +22,7 @@ class ConfigurationTest extends Specification {
 		def config = new Configuration()
 		config.parameters {
 			lajos {
-				defaultValue { "tibor" }
+				defaultValue = "tibor"
 			}
 		}
 		def input = new BufferedReader(new StringReader("\n"))
@@ -37,7 +37,7 @@ class ConfigurationTest extends Specification {
 		def config = new Configuration()
 		config.parameters {
 			lajos {
-				defaultValue { "tibor" }
+				defaultValue "tibor"
 			}
 		}
 		def input = new BufferedReader(new StringReader("geza\n"))

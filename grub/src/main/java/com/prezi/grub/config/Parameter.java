@@ -55,21 +55,23 @@ public class Parameter extends GroovyObjectSupport {
 		setPrompt(prompt);
 	}
 
-	public void setValue(Closure<?> value) {
-		setValueInternal(value, false);
+	public void setValue(Object value) {
+		Closure<?> closure = value instanceof Closure ? (Closure<?>) value : new ValueClosure<Object>(value);
+		setValueInternal(closure, false);
 	}
 
 	@SuppressWarnings("UnusedDeclaration")
-	public void value(Closure<?> value) {
+	public void value(Object value) {
 		setValue(value);
 	}
 
-	public void setDefaultValue(Closure<?> value) {
-		setValueInternal(value, true);
+	public void setDefaultValue(Object value) {
+		Closure<?> closure = value instanceof Closure ? (Closure<?>) value : new ValueClosure<Object>(value);
+		setValueInternal(closure, true);
 	}
 
 	@SuppressWarnings("UnusedDeclaration")
-	public void defaultValue(Closure<?> value) {
+	public void defaultValue(Object value) {
 		setDefaultValue(value);
 	}
 
@@ -110,5 +112,19 @@ public class Parameter extends GroovyObjectSupport {
 	@SuppressWarnings("UnusedDeclaration")
 	public void prompt(boolean prompt) {
 		setPrompt(prompt);
+	}
+
+	private class ValueClosure<T> extends Closure<T> {
+		private final T value;
+
+		public ValueClosure(T value) {
+			super(Parameter.this);
+			this.value = value;
+		}
+
+		@SuppressWarnings("UnusedDeclaration")
+		public T doCall(Object arguments) {
+			return value;
+		}
 	}
 }
