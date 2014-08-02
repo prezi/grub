@@ -84,9 +84,15 @@ public class GenerateCommand implements Callable<Integer> {
 		File templateDirectory = Files.createTempDir();
 		try {
 			logger.info("Cloning template");
-			ProcessUtils.executeIn(
-					new File(System.getProperty("user.dir")),
-					Arrays.asList("git", "clone", template, templateDirectory.getPath()));
+			ImmutableList.Builder<String> cloneBuilder = ImmutableList.builder();
+			cloneBuilder.add("git", "clone");
+			if (verbose) {
+				cloneBuilder.add("--verbose");
+			} else {
+				cloneBuilder.add("--quiet");
+			}
+			cloneBuilder.add(template, templateDirectory.getPath());
+			ProcessUtils.executeIn(new File(System.getProperty("user.dir")), cloneBuilder.build());
 
 			File grubFile = new File(templateDirectory, GRUB_FILE);
 			if (!grubFile.isFile()) {
