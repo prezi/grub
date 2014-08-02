@@ -11,13 +11,16 @@ task version {
 	}
 }
 
+def sonatype = hasProperty("sonatype")
+def signArtifacts = sonatype || hasProperty("sign")
+
 allprojects {
 	group = "com.prezi.grub"
 	version = gitVersion
 	description = "Grub creates projects from templates"
 }
 
-subprojects {
+subprojects { subproject ->
 	apply plugin: "idea"
 	apply plugin: "maven"
 	apply plugin: "groovy"
@@ -41,6 +44,98 @@ subprojects {
 		testCompile("org.spockframework:spock-core:0.7-groovy-2.0") {
 			exclude group: "org.codehaus.groovy"
 		}
+	}
+
+	uploadArchives {
+		repositories {
+			mavenDeployer {
+				pom.project {
+					url "http://github.com/prezi/grub"
+					name subproject.name
+					description subproject.description
+
+					scm {
+						url "http://github.com/prezi/grub"
+						connection "scm:git@github.com:prezi/grub.git"
+						developerConnection "scm:git@github.com:prezi/grub.git"
+					}
+
+					licenses {
+						license {
+							name "The Apache Software License, Version 2.0"
+							url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+							distribution "repo"
+						}
+					}
+
+					developers {
+						developer {
+							id "lptr"
+							name "Lorant Pinter"
+						}
+					}
+				}
+
+				if (sonatype) {
+					repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+						def user = project.getProperty("sonatypeUsername")
+						def password = project.getProperty("sonatypePassword")
+						authentication(userName: user, password: password)
+					}
+					snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+						def user = project.getProperty("sonatypeUsername")
+						def password = project.getProperty("sonatypePassword")
+						authentication(userName: user, password: password)
+					}
+				} else if (project.hasProperty("nexusUser") && project.hasProperty("nexusPassword")) {
+					def user = project.getProperty("nexusUser")
+					def password = project.getProperty("nexusPassword")
+					repository(url: "https://artifactory.prezi.com/plugins-release-local/") {
+						authentication(userName: user, password: password)
+					}
+					snapshotRepository(url: "https://artifactory.prezi.com/plugins-snapshot-local/") {
+						authentication(userName: user, password: password)
+					}
+				}
+			}
+		}
+	}
+
+	if (signArtifacts) {
+		apply plugin: "signing"
+
+		signing {
+			sign configurations.archives
+		}
+
+		uploadArchives {
+			repositories {
+				mavenDeployer {
+					beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+				}
+			}
+		}
+	}
+
+	task javadocJar(type: Jar) {
+		dependsOn javadoc
+		classifier = "javadoc"
+		from "build/docs/javadoc"
+	}
+
+	task sourcesJar(type: Jar) {
+		from sourceSets.main.allSource
+		classifier = "sources"
+	}
+
+	jar {
+		from rootProject.file("LICENSE.txt")
+	}
+
+	artifacts {
+		archives jar
+		archives javadocJar
+		archives sourcesJar
 	}
 }
 
