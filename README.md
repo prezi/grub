@@ -11,5 +11,5 @@ Grub is available under the [Apache License, Version 2.0](http://www.apache.org/
 
 ## Thanks
 
-* Grub borrows many ideas from [giter8](https://github.com/n8han/giter8), and tries to implement it in a more flexible way with Groovy.
+* Grub borrows many ideas from [giter8](https://github.com/n8han/giter8), and tries to implement them in a more flexible way with Groovy.
 * The great [Airline](https://github.com/airlift/airline) command-line library makes it easy to extend the command-line interface of Grub.
