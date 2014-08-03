@@ -66,4 +66,18 @@ class ConfigurationTest extends Specification {
 				moduleLongName: 17,
 		]
 	}
+
+	def "loading"() {
+		def config = Configuration.loadConfiguration("""
+parameters {
+	moduleName {
+		value { 12 }
+	}
+}
+""")
+		expect:
+		config.resolve(null) == [
+		        moduleName: 12
+		]
+	}
 }

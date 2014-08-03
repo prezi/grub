@@ -1,4 +1,4 @@
-package com.prezi.grub;
+package com.prezi.grub.gradle;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;

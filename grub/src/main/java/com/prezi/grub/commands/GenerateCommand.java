@@ -9,7 +9,6 @@ import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import com.prezi.grub.GrubException;
 import com.prezi.grub.config.Configuration;
-import com.prezi.grub.config.Configurator;
 import com.prezi.grub.internal.ProcessUtils;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
@@ -23,7 +22,6 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -111,7 +109,7 @@ public class GenerateCommand implements Callable<Integer> {
 			parameters.put("target", targetDirectory.getAbsolutePath());
 
 			logger.debug("Loading configuration from {}", grubFile);
-			Configuration configuration = Configurator.loadConfiguration(grubFile);
+			Configuration configuration = Configuration.loadConfiguration(grubFile);
 			Map<String, Object> resolved = configuration.resolve(input);
 			parameters.putAll(resolved);
 
@@ -147,7 +145,7 @@ public class GenerateCommand implements Callable<Integer> {
 				ImmutableList<String> arguments = args.build();
 				connection.newBuild()
 						.withArguments(arguments.toArray(new String[arguments.size()]))
-						.forTasks("processTemplate")
+						.forTasks("generate")
 						.run();
 			} finally {
 				connection.close();
