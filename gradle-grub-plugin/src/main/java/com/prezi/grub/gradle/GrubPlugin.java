@@ -11,7 +11,7 @@ public class GrubPlugin implements Plugin<Project> {
 		GrubConvention convention = new GrubConvention();
 		project.getConvention().getPlugins().put("grub", convention);
 
-		ProcessTemplateFiles processDefaultTemplateFiles = project.getTasks().create("processDefaultTemplateFiles", ProcessTemplateFiles.class);
+		ProcessFiles processDefaultTemplateFiles = project.getTasks().create("processDefaultTemplateFiles", ProcessFiles.class);
 		processDefaultTemplateFiles.setTemplateDirectory(project.file(project.property("template") + "/src/main/grub"));
 		processDefaultTemplateFiles.setTargetDirectory(project.file(project.property("target")));
 

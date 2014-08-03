@@ -16,7 +16,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.util.Map;
 
-public class ProcessTemplateFiles extends DefaultTask {
+public class ProcessFiles extends DefaultTask {
 	private File templateDirectory;
 	private File targetDirectory;
 
