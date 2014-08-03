@@ -1,4 +1,4 @@
-package com.prezi.grub.config;
+package com.prezi.grub.gradle.config;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
@@ -9,6 +9,7 @@ import org.codehaus.groovy.runtime.StringGroovyMethods;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.Map;
 
 public class ParameterContainer extends GroovyObjectSupport {
@@ -36,7 +37,8 @@ public class ParameterContainer extends GroovyObjectSupport {
 		throw new MissingPropertyException(name, ParameterContainer.class);
 	}
 
-	public Map<String, Object> resolve(BufferedReader input) throws IOException {
+	public Map<String, Object> resolve(Reader reader) throws IOException {
+		BufferedReader input = new BufferedReader(reader);
 		if (resolvedValues == null) {
 			resolvedValues = Maps.newLinkedHashMap();
 			for (Parameter parameter : parameters.values()) {
@@ -63,6 +65,7 @@ public class ParameterContainer extends GroovyObjectSupport {
 
 					while (true) {
 						System.out.print(prompt);
+						System.out.flush();
 						String userInput = input.readLine();
 						if (Strings.isNullOrEmpty(userInput)) {
 							if (required && value == null) {

@@ -8,7 +8,6 @@ import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import com.prezi.grub.GrubException;
-import com.prezi.grub.config.Configuration;
 import com.prezi.grub.internal.ProcessUtils;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
@@ -19,9 +18,7 @@ import org.gradle.tooling.ProjectConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -77,8 +74,6 @@ public class GenerateCommand implements Callable<Integer> {
 			throw new GrubException("Target directory already exists: " + targetDirectory);
 		}
 
-		BufferedReader input = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
-
 		File templateDirectory = Files.createTempDir();
 		try {
 			logger.info("Cloning template");
@@ -106,12 +101,6 @@ public class GenerateCommand implements Callable<Integer> {
 
 			Map<String, Object> parameters = Maps.newLinkedHashMap();
 			parameters.put("template", templateDirectory.getAbsolutePath());
-			parameters.put("target", targetDirectory.getAbsolutePath());
-
-			logger.debug("Loading configuration from {}", grubFile);
-			Configuration configuration = Configuration.loadConfiguration(grubFile);
-			Map<String, Object> resolved = configuration.resolve(input);
-			parameters.putAll(resolved);
 
 			// Add prefix to template.grub
 			File processedGrubFile = new File(targetDirectory, GRUB_FILE);
@@ -123,7 +112,7 @@ public class GenerateCommand implements Callable<Integer> {
 				}
 			}
 			CharSink processedGrubSink = Files.asCharSink(processedGrubFile, Charsets.UTF_8, FileWriteMode.APPEND);
-			processedGrubSink.write("apply plugin: 'grub';");
+			processedGrubSink.write("apply plugin: 'grub'; import com.prezi.grub.gradle.*;");
 			Files.asCharSource(grubFile, Charsets.UTF_8).copyTo(processedGrubSink);
 
 			logger.info("Generating template");
@@ -145,6 +134,7 @@ public class GenerateCommand implements Callable<Integer> {
 				ImmutableList<String> arguments = args.build();
 				connection.newBuild()
 						.withArguments(arguments.toArray(new String[arguments.size()]))
+						.setStandardInput(System.in)
 						.forTasks("generate")
 						.run();
 			} finally {

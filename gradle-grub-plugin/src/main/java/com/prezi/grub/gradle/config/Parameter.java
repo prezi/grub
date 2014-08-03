@@ -1,4 +1,4 @@
-package com.prezi.grub.config;
+package com.prezi.grub.gradle.config;
 
 import groovy.lang.Closure;
 import groovy.lang.GroovyObjectSupport;
