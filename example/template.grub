@@ -23,5 +23,19 @@ generate {
 
 		// Generate the wrapper when we are done
 		exec { commandLine "gradle", "wrapper" }
+
+		// Show some nice message
+		println """
+Your application has been created.
+
+	* package name: ${packageName}
+	* greeted entity: ${what}
+	* gradle version: ${gradleVersion}
+
+You can now run the application:
+
+	\$ cd ${projectDir}
+	\$ ./gradlew run
+"""
 	}
 }

@@ -102,6 +102,9 @@ generate {
 
 		// Generate the wrapper when we are done
 		exec { commandLine "gradle", "wrapper" }
+
+		// Show some message
+		println "Greeter for ${what} generated in ${projectDir}"
 	}
 }
 ```
@@ -114,7 +117,7 @@ In the `parameters { ... }` section you can define parameters that will be queri
 
 For both `value` and `defaultValue` you can supply constant values. If you want to refer to a previously defined parameter, you need to wrap it in a closure (`{ ... }`).
 
-The basic template processing is pretty powerful, but if you want to do more, you can leverage Gradle's power by attaching extra tasks and actions to the `generate` task. In the example above we run two commands, one to set up a Git repository, the other to generate a Gradle wrapper for the newly created project.
+The basic template processing is pretty powerful, but if you want to do more, you can leverage Gradle's power by attaching extra tasks and actions to the `generate` task. In the example above we run two commands, one to set up a Git repository, the other to generate a Gradle wrapper for the newly created project. You can also refer to the template's parameters in here with the `${parameter}` notation.
 
 ## License
 
