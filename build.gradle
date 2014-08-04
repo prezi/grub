@@ -171,6 +171,10 @@ project("grub") {
 			classifier "dist"
 		}
 	}
+
+	install {
+		dependsOn installApp
+	}
 }
 
 project("gradle-grub-plugin") {
