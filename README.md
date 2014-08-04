@@ -67,7 +67,7 @@ public class HelloWorld {
 
 File names are also treated as Groovy templates, so if you have a file called `${className}.java` in your template, it will generate a file called `HelloWorld.java`. Slashes ('/') in parameters will generate the corresponding directory structure, i.e. if `packageDir` is `com/example/grub`, a template directory called `$packageDir` will expand to `com/example/grub`.
 
-If you want to protect some of your files from being processed, you can place a `.grubverbatim` file in `src/main/grub` with GLOB 
+If you want to protect some of your files from being processed, you can place a `.grubverbatim` file in `src/main/grub` with [glob](http://unixhelp.ed.ac.uk/CGI/man-cgi?glob+7) syntax. 
 
 The `template.grub` file describes how your template is to be processed. It contains two main parts:
 
