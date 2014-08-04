@@ -22,6 +22,10 @@ public class GlobsUtils {
 			if (line.length() == 0 || line.startsWith("#")) {
 				continue;
 			}
+			// If it doesn't contain a '/', match in every directory by default
+			if (!line.contains("/")) {
+				line = "**/" + line;
+			}
 			String pattern;
 			if (File.separatorChar == '\\') {
 				pattern = Globs.toWindowsRegexPattern(line);
