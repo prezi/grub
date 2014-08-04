@@ -9,6 +9,7 @@ import org.apache.commons.io.FileUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.TaskAction;
 
@@ -67,11 +68,16 @@ public class ProcessFiles extends DefaultTask {
 	}
 
 	@InputFile
+	@Optional
 	public File getVerbatimFile() {
-		if (verbatimFile == null) {
-			return new File(getTemplateDirectory(), VERBATIM_FILE);
+		File result = verbatimFile;
+		if (result == null) {
+			result = new File(getTemplateDirectory(), VERBATIM_FILE);
 		}
-		return verbatimFile;
+		if (!result.exists()) {
+			result = null;
+		}
+		return result;
 	}
 
 	public void setVerbatimFile(Object verbatimFile) {
