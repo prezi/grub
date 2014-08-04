@@ -1,0 +1,27 @@
+parameters {
+	packageName {
+		description = "The name of the package"
+		defaultValue = "com.example.grub"
+	}
+	packageDir {
+		value = { packageName.replaceAll(/\./, '/') }
+	}
+	what {
+		description = "What shall we greet?"
+		defaultValue = "World";
+	}
+	gradleVersion {
+		description = "The Gradle wrapper version"
+		defaultValue = "2.0"
+	}
+}
+
+generate {
+	doLast {
+		// The user will want Git
+		exec { commandLine "git", "init" }
+
+		// Generate the wrapper when we are done
+		exec { commandLine "gradle", "wrapper" }
+	}
+}

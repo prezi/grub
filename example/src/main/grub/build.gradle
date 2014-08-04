@@ -1,0 +1,9 @@
+apply plugin: "java"
+apply plugin: "application"
+
+group = "${packageName}"
+mainClassName = "${packageName}.Hello${what}"
+
+task wrapper(type: Wrapper) {
+	gradleVersion = "${gradleVersion}"
+}
