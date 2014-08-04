@@ -15,6 +15,12 @@ import java.io.Reader;
 import java.util.Map;
 
 public class GrubPlugin implements Plugin<Project> {
+
+	public static final String GENERATE_TASK = "generate";
+	public static final String DEFAULT_PROCESS_FILES_TASK = "processDefaultTemplateFiles";
+	public static final String TEMPLATE_PROPERTY = "template";
+	public static final String DEFAULT_TEMPLATE_LOCATION = "src/main/grub";
+
 	@Override
 	public void apply(Project project) {
 		final ParameterContainer parameters = project.getExtensions().create("parameters", ParameterContainer.class);
@@ -34,11 +40,11 @@ public class GrubPlugin implements Plugin<Project> {
 			}
 		});
 
-		ProcessFiles processDefaultTemplateFiles = project.getTasks().create("processDefaultTemplateFiles", ProcessFiles.class);
-		processDefaultTemplateFiles.setTemplateDirectory(project.file(project.property("template") + "/src/main/grub"));
-		processDefaultTemplateFiles.setTargetDirectory(project.file(project.getProjectDir()));
+		ProcessFiles processDefaultTemplateFiles = project.getTasks().create(DEFAULT_PROCESS_FILES_TASK, ProcessFiles.class);
+		processDefaultTemplateFiles.setTemplateDirectory(project.file(project.property(TEMPLATE_PROPERTY) + "/" + DEFAULT_TEMPLATE_LOCATION));
+		processDefaultTemplateFiles.setTargetDirectory(project.getProjectDir());
 
-		Task generateTask = project.getTasks().create("generate");
+		Task generateTask = project.getTasks().create(GENERATE_TASK);
 		generateTask.dependsOn(processDefaultTemplateFiles);
 	}
 }
