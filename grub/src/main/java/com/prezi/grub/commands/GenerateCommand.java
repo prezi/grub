@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -49,6 +50,10 @@ public class GenerateCommand implements Callable<Integer> {
 			description = "Turn on debug mode")
 	private boolean debug;
 
+	@Option(name = {"--local"},
+			description = "The template is a local directory, not a Git repository")
+	private boolean local;
+
 	@Arguments(title = "template",
 			description = "URL of the template",
 			required = true)
@@ -76,16 +81,11 @@ public class GenerateCommand implements Callable<Integer> {
 
 		File templateDirectory = Files.createTempDir();
 		try {
-			logger.info("Cloning template");
-			ImmutableList.Builder<String> cloneBuilder = ImmutableList.builder();
-			cloneBuilder.add("git", "clone");
-			if (verbose) {
-				cloneBuilder.add("--verbose");
+			if (local) {
+				copyTemplate(templateDirectory);
 			} else {
-				cloneBuilder.add("--quiet");
+				cloneTemplate(templateDirectory);
 			}
-			cloneBuilder.add(template, templateDirectory.getPath());
-			ProcessUtils.executeIn(new File(System.getProperty("user.dir")), cloneBuilder.build());
 
 			File grubFile = new File(templateDirectory, GRUB_FILE);
 			if (!grubFile.isFile()) {
@@ -115,7 +115,7 @@ public class GenerateCommand implements Callable<Integer> {
 			processedGrubSink.write("apply plugin: 'grub'; import com.prezi.grub.gradle.*;");
 			Files.asCharSource(grubFile, Charsets.UTF_8).copyTo(processedGrubSink);
 
-			logger.info("Generating template");
+			logger.info("Generating project in {}", targetDirectory.getAbsolutePath());
 			GradleConnector connector = GradleConnector.newConnector();
 			ProjectConnection connection = connector.forProjectDirectory(targetDirectory).connect();
 			try {
@@ -152,5 +152,24 @@ public class GenerateCommand implements Callable<Integer> {
 			}
 		}
 		return 0;
+	}
+
+	private void cloneTemplate(File target) throws IOException {
+		logger.info("Cloning template from {}", template);
+		ImmutableList.Builder<String> cloneBuilder = ImmutableList.builder();
+		cloneBuilder.add("git", "clone");
+		if (verbose) {
+			cloneBuilder.add("--verbose");
+		} else {
+			cloneBuilder.add("--quiet");
+		}
+		cloneBuilder.add(template, target.getAbsolutePath());
+		ProcessUtils.executeIn(new File(System.getProperty("user.dir")), cloneBuilder.build());
+	}
+
+	private void copyTemplate(File target) throws IOException {
+		File source = new File(template);
+		logger.info("Copying template from {}", source.getAbsolutePath());
+		FileUtils.copyDirectory(source, target);
 	}
 }
