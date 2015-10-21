@@ -14,14 +14,6 @@ $ git clone https://github.com/prezi/grub.git
 $ ./gradlew install
 $ export PATH=`pwd`/grub/grub/build/install/grub/bin:$PATH
 ```
-Or alternatively brew:
-
-```text
-$ brew tap prezi/internal
-$ brew update
-$ brew install grub
-```
-
 
 ## Usage
 
